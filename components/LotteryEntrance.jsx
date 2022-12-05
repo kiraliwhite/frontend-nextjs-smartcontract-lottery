@@ -127,6 +127,7 @@ const LotteryEntrance = () => {
           <div>Entrance Fee: {ethers.utils.formatUnits(entranceFee, "ether")} ETH</div>
           <div>Number Of Players: {numPlayers}</div>
           <div>Recent Winner: {recentWinner}</div>
+          <div>this is awesome!</div>
         </div>
       ) : (
         <div>No Raffle Address Detected</div>
