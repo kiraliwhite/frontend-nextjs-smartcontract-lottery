@@ -7,7 +7,7 @@ import { Bell } from "@web3uikit/icons"
 
 const LotteryEntrance = () => {
   //從useMoralis中提取chainId並改名為chainIdHex,此時這個東西是16進制 0xa123..
-  const { chainId: chainIdHex, isWeb3Enabled } = useMoralis()
+  const { chainId: chainIdHex, isWeb3Enabled, Moralis } = useMoralis()
   //宣告一個變數chainId(不會衝突,因為上面那行在提取的過程已改名),把16進制的chainId轉為10進制
   const chainId = parseInt(chainIdHex)
   //宣告一個變數raffleAddress,  若chainId(10進制)存在於contractAddresses.json檔中,則抓取該地址,否則為null
@@ -15,8 +15,13 @@ const LotteryEntrance = () => {
 
   //為了讓entranceFee的值改變時,能夠自動重新渲染頁面,使用useState,初始值為0
   const [entranceFee, setEntranceFee] = useState("0")
-  const [numPlayers, setNumPlayers] = useState("0")
+  const [numPlayers, setNumPlayers] = useState(0)
   const [recentWinner, setRecentWinner] = useState("0")
+  const [contractBalance, setContractBalance] = useState("0");
+  const [playerTimes, setPlayerTimes] = useState(0);
+  const [winChance, setWinChance] = useState("0");
+  const [winnerBalance, setWinnerBalance] = useState("0")
+  const [ethPrice, setEthPrice] = useState("0")
 
   //呼叫Moralis的useWeb3Contract,呼叫Raffle合約中的getEntranceFee view function,抓取最低入金金額
   const { runContractFunction: getEntranceFee } = useWeb3Contract({
@@ -55,15 +60,78 @@ const LotteryEntrance = () => {
     params: {},
   })
 
+  //顯示當前帳號下注了幾次,目前是undefine 明天再處理
+  const { runContractFunction: getPlayerTimes } = useWeb3Contract({
+    abi: abi,
+    contractAddress: raffleAddress,
+    functionName: "getPlayerTimes",
+    params: {},
+  })
+
+  //顯示勝利者拿到多少錢
+  const { runContractFunction: getWinnerBalance } = useWeb3Contract({
+    abi: abi,
+    contractAddress: raffleAddress,
+    functionName: "getWinnerBalance",
+    params: {},
+  })
+
+  //顯示以太幣價
+  const { runContractFunction: getPrice } = useWeb3Contract({
+    abi: abi,
+    contractAddress: raffleAddress,
+    functionName: "getPrice",
+    params: {},
+  })
+
+  //抓取合約現有金額
+  async function getContractBalance() {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    //使用provider抓取餘額,傳入合約地址
+    const balance = await provider.getBalance(raffleAddress);
+    //console.log(`None format balance is ${balance}`);
+    //console.log(`Contract balance is ${ethers.utils.formatEther(balance)}`);
+    return balance;
+  }
+
+  async function getWinChance() {
+    const a = (await getPlayerTimes()).toNumber()
+    const b = (await getNumberOfPlayers()).toNumber()
+    if (a != 0 && b != 0) { 
+      const percent = a / b * 10000;
+      const round = Math.round(percent) / 100;
+      const chance = round + "%";
+      return chance;
+    }
+  }
+
   //當此function被呼叫時,呼叫合約取得值,更新到State中
   async function UpdateUI() {
     const entranceFeeFromCall = (await getEntranceFee()).toString()
-    const numPlayersFromCall = (await getNumberOfPlayers()).toString()
+    const numPlayersFromCall = (await getNumberOfPlayers()).toNumber()
     const recentWinnerFromCall = await getRecentWinner()
+    const contractBalanceFromCall = (await getContractBalance()).toString()
+    const playerTimesFromCall = (await getPlayerTimes()).toNumber()
+    const winnerBalanceFromCall = (await getWinnerBalance()).toString();
+    //const ethPriceFromCall = (await getPrice()).toNumber();
+    //不能這樣寫的原因是 bigNumber太大 沒辦法直接轉成數字
+    const ethPriceFromCall = (await getPrice()).toString();
     setEntranceFee(entranceFeeFromCall)
     setNumPlayers(numPlayersFromCall)
     setRecentWinner(recentWinnerFromCall)
+    setContractBalance(contractBalanceFromCall);
+    setPlayerTimes(playerTimesFromCall);
+    setWinnerBalance(winnerBalanceFromCall);
+    setEthPrice(ethPriceFromCall);
+    const winChanceFromCall = await getWinChance();
+    setWinChance(winChanceFromCall);
   }
+
+  //以太幣轉美元
+  function priceConvert(fees) {
+    return ethers.utils.formatUnits(fees, "ether") * ethers.utils.formatUnits(ethPrice, "ether")
+  }
+
 
   //使用useEffect,在頁面載入完成之後,且有連接MetaMask的狀態下,去呼叫view function,抓取入金金額
   //但頁面載入的第一次,都是用戶沒有連接錢包的狀態下,所以isWeb3Enabled是false,所以不會呼叫getEntranceFee
@@ -76,6 +144,16 @@ const LotteryEntrance = () => {
       }
     }
   }, [isWeb3Enabled])
+
+    //此useEffect,僅會在頁面刷新後執行一次
+    useEffect(() => {
+      //當檢測到Account更動時
+      Moralis.onAccountChanged(() => {
+        //刷新頁面
+        UpdateUI()
+      })
+    }, [])
+
 
   const dispatch = useNotification()
   //當onClick呼叫enterRaffle成功時,會呼叫此function,這是一個async function,輸入參數是transaction
@@ -103,7 +181,9 @@ const LotteryEntrance = () => {
 
   return (
     <div className="p-5">
-      Hi from Lottery Entrance!
+      <div>這是一個去中心化的彩票智能合約</div>
+      <div>每一注的金額均相同，下注次數越多中獎機率越高</div>
+      <div>獲勝者將獨得所有獎金，並由智能合約自動轉移至您的錢包</div>
       {/* onClick之後觸發enterRaffle,若Success則呼叫handleSuccess function 
 	  若error,則將錯誤訊息印在console.log*/}
       {raffleAddress ? (
@@ -124,13 +204,15 @@ const LotteryEntrance = () => {
               <div>Enter Raffle</div>
             )}
           </button>
-          <div>Entrance Fee: {ethers.utils.formatUnits(entranceFee, "ether")} ETH</div>
-          <div>Number Of Players: {numPlayers}</div>
-          <div>Recent Winner: {recentWinner}</div>
-          <div>this is awesome!</div>
+          <div>每一注金額: {ethers.utils.formatUnits(entranceFee, "ether")} ETH  ({priceConvert(entranceFee)} USD)</div>
+          <div>獎金池總金額: {ethers.utils.formatUnits(contractBalance, "ether")} ETH ({priceConvert(contractBalance)} USD)</div>
+          <div>下注人數: {numPlayers}</div>
+          <div>當前帳號下注次數: {playerTimes}</div>
+          <div>中獎機率: {winChance}</div>
+          <div>最近的中獎者錢包地址: {recentWinner} <br />獨得金額: {ethers.utils.formatUnits(winnerBalance, "ether")} ETH ({priceConvert(winnerBalance)} USD)</div>
         </div>
       ) : (
-        <div>No Raffle Address Detected</div>
+        <div>未偵測到智能合約，請將區塊鏈錢包網路轉移至Goerli測試網</div>
       )}
     </div>
   )
