@@ -6,6 +6,7 @@ import LotteryEntrance from "../components/LotteryEntrance"
 import Footer from "../components/Footer"
 import About from "../components/About"
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
+import Aaa from "../components/Aaa"
 
 export default function Home() {
   return (
