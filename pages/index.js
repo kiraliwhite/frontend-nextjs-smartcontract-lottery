@@ -6,7 +6,8 @@ import LotteryEntrance from "../components/LotteryEntrance"
 import Footer from "../components/Footer"
 import About from "../components/About"
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
-import Aaa from "../components/Aaa"
+import Time from "../components/Time"
+import Comment from "../components/Comment"
 
 export default function Home() {
   return (
@@ -19,6 +20,8 @@ export default function Home() {
       <Header />
       {/* 使用route來導向不同的path*/}
       <LotteryEntrance />
+      <Time />
+      <Comment />
     </div>
   )
 }
