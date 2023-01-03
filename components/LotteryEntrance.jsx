@@ -87,21 +87,6 @@ const LotteryEntrance = () => {
     params: {},
   })
 
-  // //顯示間隔時間
-  // const { runContractFunction: getInterval } = useWeb3Contract({
-  //   abi: abi,
-  //   contractAddress: raffleAddress,
-  //   functionName: "getInterval",
-  //   params: {},
-  // })
-
-  // const { runContractFunction: getRaffleState } = useWeb3Contract({
-  //   abi: abi,
-  //   contractAddress: raffleAddress,
-  //   functionName: "getRaffleState",
-  //   params: {},
-  // })
-
   //抓取合約現有金額
   async function getContractBalance() {
     const provider = new ethers.providers.Web3Provider(window.ethereum)

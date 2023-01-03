@@ -54,17 +54,19 @@ const Time = () => {
   }
 
   function nextInterval() {
-    const y = tomorrow().getFullYear()
-    const m = tomorrow().getMonth() //0對應1月 1對應2月,要轉字串時要+1
-    const d = tomorrow().getDate()
+    const y = tomorrow().getFullYear().toString()
+    const m = (tomorrow().getMonth()+1).toString() //0對應1月 1對應2月,要轉字串時要+1
+    const d = tomorrow().getDate().toString()
     //拼出明天日期的字串,固定在指定的開獎時間
-    const tomorrowTime = `${y}-${m + 1}-${d}T12:00:00.00`
+    //會這樣寫是因為 如果遇到個位數的日期,就需要自動補0,用字串的index判斷,若index 1存在就不補0
+    //若index 1 不存在就補0
+    const tomorrowTime = `${y}-${m[1] ? m : "0" + m[0]}-${d[1] ? d : "0" + d[0]}T12:00:00.00`
     //console.log(tomorrowTime)
     //將字串轉成日期格式
     const nextDate = new Date(`${tomorrowTime}`)
     //明天日期的秒數
     const nextSeconds = Math.floor(nextDate.getTime() / 1000)
-    //console.log(nextSeconds)
+    console.log(nextDate)
     const today = new Date()
     const todaySeconds = Math.floor(today.getTime() / 1000)
     //console.log(todaySeconds)
